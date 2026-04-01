@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "kb-agent.fullname" . }}-test-query
+  labels:
+    {{- include "kb-agent.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: curl
+      image: curlimages/curl:8.7.1
+      command:
+        - sh
+        - -c
+        - |
+          set -eu
+          RESPONSE=$(curl -fsS -X POST http://{{ include "kb-agent.fullname" . }}:{{ .Values.service.port }}/v1/query \
+            -H 'content-type: application/json' \
+            -d '{"question":"What are you?"}')
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep '"status":"answered"'

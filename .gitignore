@@ -1,0 +1,12 @@
+# Ignore Mac system files and environment variable files
+.DS_Store
+.env
+
+## Ignore node modules, build output, and coverage reports
+node_modules/
+dist/
+coverage/
+
+# Ignore ops files
+*.log
+Taskfile.yaml
