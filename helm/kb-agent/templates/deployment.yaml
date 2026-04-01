@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kb-agent.fullname" . }}
+  labels:
+    {{- include "kb-agent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "kb-agent.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "kb-agent.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      {{- if and .Values.kb.mount.enabled .Values.kb.bootstrap.enabled }}
+      initContainers:
+        - name: kb-bootstrap
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              if [ ! -f {{ .Values.kb.root }}/_KB_INDEX.md ]; then
+                cp -R {{ .Values.kb.bootstrapPath }}/. {{ .Values.kb.root }}/
+              fi
+          volumeMounts:
+            - name: kb-data
+              mountPath: {{ .Values.kb.root }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+      {{- end }}
+      containers:
+        - name: rainman
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+          envFrom:
+            - configMapRef:
+                name: {{ include "kb-agent.fullname" . }}
+            - secretRef:
+                name: {{ include "kb-agent.fullname" . }}
+          {{- if .Values.kb.mount.enabled }}
+          volumeMounts:
+            - name: kb-data
+              mountPath: {{ .Values.kb.root }}
+            {{- with .Values.kb.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- else if .Values.kb.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.kb.extraVolumeMounts | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+        {{- with .Values.kb.sidecars }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- if or .Values.kb.mount.enabled .Values.kb.extraVolumes }}
+      volumes:
+        {{- if .Values.kb.mount.enabled }}
+        - name: kb-data
+          emptyDir: {}
+        {{- end }}
+        {{- with .Values.kb.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      securityContext:
+        fsGroup: 1000

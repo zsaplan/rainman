@@ -1,0 +1,2 @@
+export const MAX_RESULT_REPAIR_ATTEMPTS = 2;
+export const MAX_AGENT_EXECUTION_MS = 120_000;
