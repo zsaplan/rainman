@@ -1,0 +1,11 @@
+{
+  "name": "@rain/agent-fil",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Fil cleaner agent scaffold",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -5,6 +5,7 @@
 ## Ignore node modules, build output, and coverage reports
 node_modules/
 dist/
+**/dist/
 coverage/
 
 # Ignore ops files

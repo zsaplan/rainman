@@ -4,6 +4,8 @@
 
 This document describes the intended design of the KB Expert Agent MVP, including the rationale behind each major decision. It is a design record, not an implementation transcript. Where this document and implementation drift, the implementation should be corrected unless there is an explicit recorded design change.
 
+This document is specific to `agents/rainman` inside the monorepo. Treat the `agents/rainman` directory as the local repository root for relative paths below unless explicitly noted otherwise.
+
 ## Purpose
 
 The system exists to answer narrow domain questions from a markdown knowledge base with a very strong bias toward correctness. It is not a general assistant. It is not a reasoning sandbox. It is not a search engine over arbitrary sources. It is a constrained evidence retrieval and response service.
@@ -246,6 +248,8 @@ The authoritative KB is made available directly in the runtime filesystem under 
 
 The bootstrap KB should include files such as `_KB_INDEX.md` and `_WHOAMI.md`, but the service must treat any mounted markdown files under the KB root as equally authoritative.
 
+In the current local kind workflow, a taskfile-managed Helm overlay injects a Git-sync-style sidecar that periodically performs a shallow pull from a separate GitHub repository using a Kubernetes Secret derived from `GITHUB_TOKEN` or `gh auth token`. The synced repository contents are written into a subdirectory under the mounted KB root so the bootstrap files remain available even when external KB content is unavailable.
+
 #### Rationale
 
 - keeps the runtime boundary simple and filesystem-based
@@ -255,7 +259,7 @@ The bootstrap KB should include files such as `_KB_INDEX.md` and `_WHOAMI.md`, b
 
 #### Tradeoff
 
-The running service depends on correct KB mount population. A later sidecar may clone or pull the mounted KB content from a separate knowledge base Git repository, which introduces sync and freshness concerns that must not weaken correctness guarantees.
+The running service depends on correct KB mount population. The current local sidecar-based sync path introduces repo-auth, polling, and freshness concerns that must not weaken correctness guarantees. The bootstrap KB intentionally remains in the image so the service can still support smoke tests and minimal identity queries even if the external sync path is unavailable.
 
 ### Decision 10: Avoid vector retrieval and semantic indexing in MVP
 
@@ -282,6 +286,7 @@ The KB is part of the correctness mechanism, not just a content store.
 - all KB content lives under one root
 - a top-level `_KB_INDEX.md` helps navigation
 - a top-level `_WHOAMI.md` provides bootstrap identity and local smoke-test context
+- additional synced KB content may live in subdirectories under the same mounted KB root and must remain discoverable through recursive traversal
 - important facts use short paragraphs, bullets, or semantic line breaks
 - file paths are stable and predictable
 - critical facts are not buried inside long paragraphs when avoidable
@@ -492,7 +497,7 @@ The MVP should leave room for the following future changes without requiring a g
 
 - migration from `pi-coding-agent` to `pi-agent-core`
 - schema registry for multiple response shapes
-- sidecar-based Git sync or pull workflows for mounted KB content
+- production-grade sidecar sync, auth rotation, and freshness policies for mounted KB content
 - KB linting and consistency checks
 - authn/authz on the API
 - limited caching

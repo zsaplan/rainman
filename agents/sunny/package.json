@@ -1,0 +1,11 @@
+{
+  "name": "@rain/agent-sunny",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sunny interviewer agent scaffold",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,29 +1,14 @@
 {
-  "name": "rainman",
-  "version": "0.1.0",
+  "name": "rain-agents-monorepo",
   "private": true,
-  "description": "Correctness-first markdown KB query service",
-  "license": "MIT",
+  "workspaces": [
+    "agents/*"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "dependencies": {
-    "@mariozechner/pi-coding-agent": "^0.64.0",
-    "@sinclair/typebox": "^0.34.41",
-    "express": "^4.21.2",
-    "pino": "^9.7.0",
-    "zod": "^3.25.76"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.3",
-    "@types/node": "^24.6.1",
-    "tsx": "^4.20.6",
-    "typescript": "^6.0.2"
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build:rainman": "npm run build -w @rain/agent-rainman",
+    "dev:rainman": "npm run dev -w @rain/agent-rainman",
+    "start:rainman": "npm run start -w @rain/agent-rainman"
   }
 }
