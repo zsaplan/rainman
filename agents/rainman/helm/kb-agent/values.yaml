@@ -1,0 +1,58 @@
+replicaCount: 1
+
+image:
+  repository: rainman
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3000
+
+config:
+  modelId: openrouter/openai/gpt-5.4
+  logLevel: info
+  port: "3000"
+
+kb:
+  root: /app/kb
+  bootstrapPath: /app/bootstrap-kb
+  mount:
+    enabled: true
+  bootstrap:
+    enabled: true
+  extraVolumes: []
+  extraVolumeMounts: []
+  sidecars: []
+  # Example git-sync style sidecar using the shared kb-data volume:
+  # sidecars:
+  #   - name: git-sync
+  #     image: registry.k8s.io/git-sync/git-sync:v4.3.0
+  #     imagePullPolicy: IfNotPresent
+  #     env:
+  #       - name: GITSYNC_REPO
+  #         value: https://github.com/example/knowledge-base.git
+  #       - name: GITSYNC_REF
+  #         value: main
+  #       - name: GITSYNC_ROOT
+  #         value: /app/kb
+  #       - name: GITSYNC_DEST
+  #         value: .
+  #       - name: GITSYNC_PERIOD
+  #         value: 30s
+  #       - name: GITSYNC_ONE_TIME
+  #         value: "false"
+  #     volumeMounts:
+  #       - name: kb-data
+  #         mountPath: /app/kb
+
+secret:
+  openRouterApiKey: change-me
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

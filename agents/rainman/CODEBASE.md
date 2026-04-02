@@ -6,6 +6,8 @@ This document is the detailed source-of-truth reference for the KB Expert Agent 
 
 This document is intentionally more implementation-oriented than `design.md`.
 
+This document is specific to `agents/rainman` inside the monorepo. Treat the `agents/rainman` directory as the local repository root for relative paths below unless explicitly noted otherwise.
+
 ## Audience
 
 This document is for:
@@ -46,7 +48,7 @@ The single most important invariant is this:
 The exact filenames may vary slightly, but the codebase should preserve the following logical structure.
 
 ```text
-repo/
+agent/
   src/
     api/
       app.ts
@@ -98,6 +100,8 @@ repo/
   kb/
     _KB_INDEX.md
     _WHOAMI.md
+    mounted-kb/
+      ...markdown files synced by sidecar...
     ...additional mounted markdown files...
   test/
     fixtures/
@@ -130,7 +134,7 @@ repo/
 
 The directory names are less important than the responsibilities. Preserve those.
 
-The repository-owned `kb/` directory is expected to stay shallow and primarily support local smoke tests and image-baked bootstrap content. At runtime, additional markdown knowledge articles may be mounted into the same KB root under `kb/`. Future deployment changes may populate that mount via a sidecar that clones or pulls from a separate knowledge base Git repository. The tools and validator must treat mounted markdown content under the KB root the same as image-baked markdown content.
+The repository-owned `kb/` directory is expected to stay shallow and primarily support local smoke tests and image-baked bootstrap content. At runtime, additional markdown knowledge articles may be mounted into the same KB root under `kb/`. In the current local kind workflow, a repo-root `taskfile.yaml` renders a temporary Helm overlay that injects a Git-sync-style sidecar, creates a Kubernetes Secret from `GITHUB_TOKEN` or `gh auth token`, and shallow-syncs a separate GitHub knowledge-base repository into `kb/mounted-kb/`. The tools and validator must treat recursively discovered mounted markdown content under the KB root the same as image-baked markdown content.
 
 ## Module responsibilities
 
@@ -789,9 +793,11 @@ The chart should remain small and transparent.
 - service port
 - model id
 - KB root
+- KB bootstrap path
 - log level
 - resources
 - OpenRouter secret wiring
+- optional KB sidecar and volume wiring
 
 ## `values-kind.yaml`
 
@@ -803,29 +809,29 @@ This file exists only to make local kind workflows predictable.
 - image tag points to locally loaded image
 - `imagePullPolicy` set to `IfNotPresent` or `Never`
 - small resource requests and limits
+- static chart values remain free of GitHub credentials
+
+The local sidecar wiring for KB sync is intentionally added at deploy time by the repo-root taskfile rather than committed into `values-kind.yaml`. That overlay uses a Kubernetes Secret populated from `GITHUB_TOKEN` or `gh auth token`, points the sidecar at a separate GitHub repository, and performs a shallow periodic sync into `kb/mounted-kb/`.
 
 ## kind local workflow reference
 
 A typical maintenance loop is:
 
-1. build image locally
+1. build image locally from the monorepo root
 2. load image into kind
-3. helm upgrade/install
+3. deploy via the repo-root taskfile so the KB sidecar overlay is rendered
 4. wait for rollout
 5. port-forward or run Helm tests
-6. inspect logs if failures occur
+6. inspect app or sidecar logs if failures occur
 
-Representative commands:
+Representative commands from the monorepo root:
 
 ```bash
-kind create cluster --name kb-agent
-
-docker build -t kb-agent:dev .
-kind load docker-image kb-agent:dev --name kb-agent
-
-helm upgrade --install kb-agent ./helm/kb-agent -f ./helm/kb-agent/values-kind.yaml
-kubectl rollout status deploy/kb-agent
-helm test kb-agent
+docker build -f ./agents/rainman/Dockerfile -t localhost/rainman:dev .
+export GITHUB_TOKEN=$(gh auth token)
+export KIND_OPEN_ROUTER_API_KEY=...
+task install-helm-rainman
+helm test rainman -n rainman --kube-context kind-bc-local
 ```
 
 ## Bugfixing guide by symptom
